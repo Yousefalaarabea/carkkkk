@@ -67,7 +67,57 @@ class ApiService {
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json', // Ensure JSON content type
           },
+        ),
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // NEW: POST request with FormData (for file uploads and form data) and token
+  Future<Response> postWithTokenAndFormData(String endpoint, FormData formData) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+    if (token == null) {
+      throw Exception('User access token not found');
+    }
+
+    try {
+      final response = await _dio.post(
+        endpoint,
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            // Dio handles Content-Type for FormData automatically (multipart/form-data)
+          },
+        ),
+      );
+      return response;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Response> postFormData(String endpoint, FormData formData) async {
+    final prefs = await SharedPreferences.getInstance();
+    // final token = prefs.getString('access_token');
+    // if (token == null) {
+    //   throw Exception('User access token not found');
+    // }
+
+    try {
+      final response = await _dio.post(
+        endpoint,
+        data: formData,
+        options: Options(
+          // headers: {
+          //   'Authorization': 'Bearer $token',
+          //   // Dio handles Content-Type for FormData automatically (multipart/form-data)
+          // },
         ),
       );
       return response;
@@ -110,10 +160,11 @@ class ApiService {
     return response;
   }
 
-  Future<Response> getWithToken(String endpoint, String token) async {
+  Future<Response> getWithToken(String endpoint, String token,{Map<String, dynamic>? queryParams}) async {
     final dio = Dio();
     final response = await dio.get(
       '${_dio.options.baseUrl}$endpoint',
+      queryParameters: queryParams,
       options: Options(
         headers: {
           'Authorization': 'Bearer $token',

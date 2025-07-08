@@ -1,23 +1,281 @@
-// ✅ الخطوة 1: Service جديد لجلب العربيات
+// // ✅ الخطوة 1: Service جديد لجلب العربيات
+//
+// import 'package:dio/dio.dart';
+// import 'package:easy_localization/easy_localization.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:test_cark/features/home/presentation/model/car_model.dart';
+// import 'package:test_cark/features/cars/presentation/models/car_rental_options.dart';
+// import 'package:test_cark/features/cars/presentation/models/car_usage_policy.dart';
+// import 'package:flutter_bloc/flutter_bloc.dart';
+// import '../core/api_service.dart';
+// // import 'package:test_cark/features/auth/presentation/cubit/auth_cubit.dart';
+// import 'package:flutter/material.dart';
+//
+// import '../features/auth/presentation/cubits/auth_cubit.dart';
+// import '../features/cars/presentation/cubits/add_car_cubit.dart';
+// import 'api_service.dart';
+//
+// class CarService {
+//   final Dio _dio = Dio(
+//     BaseOptions(
+//       //baseUrl: 'https://cark-f3fjembga0f6btek.uaenorth-01.azurewebsites.net/api/',
+//       baseUrl: 'https://brandon-moderators-thorough-strict.trycloudflare.com/api/',
+//       connectTimeout: const Duration(seconds: 60),
+//       receiveTimeout: const Duration(seconds: 60),
+//       headers: {
+//         'Accept': 'application/json',
+//         'Content-Type': 'application/json',
+//       },
+//     ),
+//   );
+//
+//   // Fetch all cars for the user, with their rental options and usage policy
+//   Future<List<Map<String, dynamic>>> fetchUserCars() async {
+//     final List<Map<String, dynamic>> result = [];
+//     try {
+//       final prefs = await SharedPreferences.getInstance();
+//       final token = prefs.getString('access_token');
+//       if (token == null) {
+//         throw Exception('User access token not found');
+//       }
+//       print('Fetching user cars from /my-cars/ using user token...');
+//       final response = await ApiService().getWithToken('my-cars/', token);
+//       if (response.statusCode == 200) {
+//         print("🔍 User cars response data type: ${response.data.runtimeType}");
+//         print("🔍 User cars response data: ${response.data}");
+//
+//         List carsData;
+//         if (response.data is Map) {
+//           // If response is a Map, try to extract the list from it
+//           final data = response.data as Map;
+//           if (data.containsKey('results')) {
+//             carsData = List.from(data['results']);
+//           } else if (data.containsKey('data')) {
+//             carsData = List.from(data['data']);
+//           } else {
+//             print("❌ Unexpected user cars response format");
+//             return [];
+//           }
+//         } else if (response.data is List) {
+//           carsData = List.from(response.data);
+//         } else {
+//           print("❌ Unexpected user cars response format");
+//           return [];
+//         }
+//
+//         print("🔍 Total cars fetched from API: ${carsData.length}");
+//
+//         for (final carJson in carsData) {
+//           final car = CarModel.fromJson(carJson);
+//           print("🔍 Car owner ID: "+ car.ownerId.toString() + " (this is the user ID who owns the car)");
+//           print("🔍 Car availability: "+ car.availability.toString() + ", approval status: "+ car.approvalStatus.toString());
+//           print("🔍 Car model: "+ car.model.toString() + ", brand: "+ car.brand.toString());
+//           print("🔍 Full carJson: " + carJson.toString());
+//           // Include cars that are available (approval status can be false for now)
+//           if (car.availability) {
+//             print("✅ Car is available, adding to result list");
+//             CarRentalOptions? rentalOptions;
+//             CarUsagePolicy? usagePolicy;
+//             // يمكن لاحقاً جلب rentalOptions و usagePolicy إذا احتجت
+//             result.add({
+//               'car': car,
+//               'carJson': carJson,
+//               'rentalOptions': rentalOptions,
+//               'usagePolicy': usagePolicy,
+//             });
+//           } else {
+//             print("❌ Car is not available, skipping");
+//           }
+//         }
+//       } else {
+//         print('Failed to fetch user cars, status: ${response.statusCode}');
+//       }
+//       return result;
+//     } catch (e) {
+//       print('Error in fetchUserCars: $e');
+//       return [];
+//     }
+//   }
+//
+//   // Fetch all available cars in the system for home screen
+//   // Future<List<Map<String, dynamic>>> fetchAllCars() async {
+//   //
+//   //   final List<Map<String, dynamic>> result = [];
+//   //   try {
+//   //     final prefs = await SharedPreferences.getInstance();
+//   //     final token = prefs.getString('admin_access_token');
+//   //     if (token == null) {
+//   //       throw Exception('User access token not found');
+//   //     }
+//   //     print('Fetching all available cars from /cars/ using user token...');
+//   //     final response = await ApiService().getWithToken('cars/', token);
+//   //     if (response.statusCode == 200) {
+//   //       print("🔍 Cars response data type: ${response.data.runtimeType}");
+//   //       print("🔍 Cars response data: ${response.data}");
+//   //
+//   //       // Debug: Check user roles to understand the difference
+//   //       await debugUserRoles();
+//   //
+//   //       List carsData;
+//   //       if (response.data is Map) {
+//   //         // If response is a Map, try to extract the list from it
+//   //         final data = response.data as Map;
+//   //         if (data.containsKey('results')) {
+//   //           carsData = List.from(data['results']);
+//   //         } else if (data.containsKey('data')) {
+//   //           carsData = List.from(data['data']);
+//   //         } else {
+//   //           print("❌ Unexpected cars response format");
+//   //           return [];
+//   //         }
+//   //       } else if (response.data is List) {
+//   //         carsData = List.from(response.data);
+//   //       } else {
+//   //         print("❌ Unexpected cars response format");
+//   //         return [];
+//   //       }
+//   //
+//   //       print("🔍 Total cars fetched from API: ${carsData.length}");
+//   //
+//   //       for (final carJson in carsData) {
+//   //         final car = CarModel.fromJson(carJson);
+//   //         print("🔍 Car owner ID: ${car.ownerId} (this is the user ID who owns the car)");
+//   //         print("🔍 Car availability: ${car.availability}, approval status: ${car.approvalStatus}");
+//   //         print("🔍 Car model: ${car.model}, brand: ${car.brand}");
+//   //         print("🔍 Full carJson: " + carJson.toString());
+//   //         // Include cars that are available (approval status can be false for now)
+//   //         if (car.availability) {
+//   //           print("✅ Car is available, adding to result list");
+//   //           CarRentalOptions? rentalOptions;
+//   //           CarUsagePolicy? usagePolicy;
+//   //           // يمكن لاحقاً جلب rentalOptions و usagePolicy إذا احتجت
+//   //           result.add({
+//   //             'car': car,
+//   //             'carJson': carJson,
+//   //             'rentalOptions': rentalOptions,
+//   //             'usagePolicy': usagePolicy,
+//   //           });
+//   //         } else {
+//   //           print("❌ Car is not available, skipping");
+//   //         }
+//   //       }
+//   //       print('✅ Successfully fetched ${result.length} available cars');
+//   //     } else {
+//   //       print('❌ Failed to fetch available cars, status: ${response.statusCode}');
+//   //     }
+//   //     return result;
+//   //   } catch (e) {
+//   //     print('❌ Error in fetchAllCars: $e');
+//   //     return [];
+//   //   }
+//   // }
+//
+//   Future<List<Map<String, dynamic>>> fetchAllCars({
+//     DateTime? availableFrom,
+//     DateTime? availableTo,
+//     String rentalType = 'both', // Default to 'both'
+//     String? carBrand, // Optional car brand
+//   }) async {
+//     final List<Map<String, dynamic>> result = [];
+//     try {
+//       final prefs = await SharedPreferences.getInstance();
+//       final token = prefs.getString('admin_access_token');
+//       if (token == null) {
+//         throw Exception('User access token not found');
+//       }
+//
+//       // Construct the endpoint with query parameters
+//       String endpoint = 'available-cars/';
+//
+//       final queryParams = <String, dynamic>{
+//         'available_from': DateFormat('yyyy-MM-dd').format(availableFrom ?? DateTime.now()), // Default to today if null
+//         'available_to': DateFormat('yyyy-MM-dd').format(availableTo ?? DateTime.now().add(Duration(days: 7))), // Default to 7 days from now if null
+//         'rental_type': rentalType,
+//       };
+//
+//       if (carBrand != null && carBrand.isNotEmpty) {
+//         queryParams['car_brand'] = carBrand;
+//       }
+//
+//       print('Fetching available cars from $endpoint with params: $queryParams using user token...');
+//       final response = await ApiService().getWithToken(endpoint, token, queryParams: queryParams);
+//
+//       if (response.statusCode == 200) {
+//         print("🔍 Cars response data type: ${response.data.runtimeType}");
+//         print("🔍 Cars response data: ${response.data}");
+//
+//         await debugUserRoles();
+//
+//         List carsData;
+//         if (response.data is Map) {
+//           final data = response.data as Map;
+//           if (data.containsKey('results')) {
+//             carsData = List.from(data['results']);
+//           } else if (data.containsKey('data')) {
+//             carsData = List.from(data['data']);
+//           } else {
+//             print("❌ Unexpected cars response format");
+//             return [];
+//           }
+//         } else if (response.data is List) {
+//           carsData = List.from(response.data);
+//         } else {
+//           print("❌ Unexpected cars response format");
+//           return [];
+//         }
+//
+//         print("🔍 Total cars fetched from API: ${carsData.length}");
+//
+//         for (final carJson in carsData) {
+//           final car = CarModel.fromJson(carJson);
+//           print("🔍 Car owner ID: ${car.ownerId} (this is the user ID who owns the car)");
+//           print("🔍 Car availability: ${car.availability}, approval status: ${car.approvalStatus}");
+//           print("🔍 Car model: ${car.model}, brand: ${car.brand}");
+//           print("🔍 Full carJson: " + carJson.toString());
+//           if (car.availability) {
+//             print("✅ Car is available, adding to result list");
+//             CarRentalOptions? rentalOptions;
+//             CarUsagePolicy? usagePolicy;
+//             // You might fetch rentalOptions and usagePolicy here if they are not part of the initial carJson
+//             // For now, they remain null as per original code unless fetched elsewhere
+//             result.add({
+//               'car': car,
+//               'carJson': carJson,
+//               'rentalOptions': rentalOptions,
+//               'usagePolicy': usagePolicy,
+//             });
+//           } else {
+//             print("❌ Car is not available, skipping");
+//           }
+//         }
+//         print('✅ Successfully fetched ${result.length} available cars');
+//       } else {
+//         print('❌ Failed to fetch available cars, status: ${response.statusCode}');
+//       }
+//       return result;
+//     } catch (e) {
+//       print('❌ Error in fetchAllCars: $e');
+//       return [];
+//     }
+//   }
+// }
 
+
+// car_service.dart
 import 'package:dio/dio.dart';
+import 'package:easy_localization/easy_localization.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test_cark/features/home/presentation/model/car_model.dart';
 import 'package:test_cark/features/cars/presentation/models/car_rental_options.dart';
 import 'package:test_cark/features/cars/presentation/models/car_usage_policy.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../core/api_service.dart';
-// import 'package:test_cark/features/auth/presentation/cubit/auth_cubit.dart';
-import 'package:flutter/material.dart';
-
 import '../features/auth/presentation/cubits/auth_cubit.dart';
-import '../features/cars/presentation/cubits/add_car_cubit.dart';
-import 'api_service.dart';
+import '../features/cars/presentation/cubits/add_car_cubit.dart'; // Import to use navigatorKey if needed, though direct context is better
 
 class CarService {
   final Dio _dio = Dio(
     BaseOptions(
-      //baseUrl: 'https://cark-f3fjembga0f6btek.uaenorth-01.azurewebsites.net/api/',
       baseUrl: 'https://brandon-moderators-thorough-strict.trycloudflare.com/api/',
       connectTimeout: const Duration(seconds: 60),
       receiveTimeout: const Duration(seconds: 60),
@@ -40,12 +298,8 @@ class CarService {
       print('Fetching user cars from /my-cars/ using user token...');
       final response = await ApiService().getWithToken('my-cars/', token);
       if (response.statusCode == 200) {
-        print("🔍 User cars response data type: ${response.data.runtimeType}");
-        print("🔍 User cars response data: ${response.data}");
-        
         List carsData;
         if (response.data is Map) {
-          // If response is a Map, try to extract the list from it
           final data = response.data as Map;
           if (data.containsKey('results')) {
             carsData = List.from(data['results']);
@@ -61,29 +315,18 @@ class CarService {
           print("❌ Unexpected user cars response format");
           return [];
         }
-        
-        print("🔍 Total cars fetched from API: ${carsData.length}");
-        
+
         for (final carJson in carsData) {
           final car = CarModel.fromJson(carJson);
-          print("🔍 Car owner ID: "+ car.ownerId.toString() + " (this is the user ID who owns the car)");
-          print("🔍 Car availability: "+ car.availability.toString() + ", approval status: "+ car.approvalStatus.toString());
-          print("🔍 Car model: "+ car.model.toString() + ", brand: "+ car.brand.toString());
-          print("🔍 Full carJson: " + carJson.toString());
-          // Include cars that are available (approval status can be false for now)
           if (car.availability) {
-            print("✅ Car is available, adding to result list");
             CarRentalOptions? rentalOptions;
             CarUsagePolicy? usagePolicy;
-            // يمكن لاحقاً جلب rentalOptions و usagePolicy إذا احتجت
             result.add({
               'car': car,
-              'carJson': carJson,
-              'rentalOptions': rentalOptions,
-              'usagePolicy': usagePolicy,
+              'carJson': carJson, // Keep if needed for debugging
+              'rentalOptions': rentalOptions, // Will be null unless fetched separately
+              'usagePolicy': usagePolicy, // Will be null unless fetched separately
             });
-          } else {
-            print("❌ Car is not available, skipping");
           }
         }
       } else {
@@ -96,92 +339,184 @@ class CarService {
     }
   }
 
-  // Fetch all available cars in the system for home screen
-  Future<List<Map<String, dynamic>>> fetchAllCars() async {
-
+  // Modified fetchAllCars to accept filters directly
+  // Future<List<Map<String, dynamic>>> fetchAllCars({
+  //   DateTime? availableFrom,
+  //   DateTime? availableTo,
+  //   String rentalType = 'both', // Default to 'both'
+  //   String? carBrand, // Optional car brand
+  // }) async {
+  //   final List<Map<String, dynamic>> result = [];
+  //   try {
+  //     final prefs = await SharedPreferences.getInstance();
+  //     final token = prefs.getString('admin_access_token'); // Or user 'access_token'
+  //     if (token == null) {
+  //       throw Exception('User access token not found');
+  //     }
+  //
+  //     String endpoint = 'available-cars/';
+  //
+  //     final queryParams = <String, dynamic>{
+  //       'available_from': DateFormat('yyyy-MM-dd').format(availableFrom ?? DateTime.now()),
+  //       'available_to': DateFormat('yyyy-MM-dd').format(availableTo ?? DateTime.now().add(const Duration(days: 7))),
+  //       'rental_type': rentalType,
+  //     };
+  //
+  //     print("""""""""""""""""""""""""""""""""""""seiffffffffff""""""""""""""""""""""""""""""""""""");
+  //     print(queryParams);
+  //     print("""""""""""""""""""""""""""""""""""""seiffffffffff""""""""""""""""""""""""""""""""""""");
+  //
+  //     if (carBrand != null && carBrand.isNotEmpty) {
+  //       queryParams['car_brand'] = carBrand;
+  //     }
+  //
+  //     print('CarService: Fetching available cars from $endpoint with params: $queryParams using token...');
+  //     final response = await ApiService().getWithToken(endpoint, token, queryParams: queryParams);
+  //
+  //     if (response.statusCode == 200) {
+  //       List carsData;
+  //       if (response.data is Map) {
+  //         final data = response.data as Map;
+  //         if (data.containsKey('results')) {
+  //           carsData = List.from(data['results']);
+  //         } else if (data.containsKey('data')) {
+  //           carsData = List.from(data['data']);
+  //         } else {
+  //           print("❌ CarService: Unexpected cars response format");
+  //           return [];
+  //         }
+  //       } else if (response.data is List) {
+  //         carsData = List.from(response.data);
+  //       } else {
+  //         print("❌ CarService: Unexpected cars response format");
+  //         return [];
+  //       }
+  //
+  //       for (final carJson in carsData) {
+  //         final car = CarModel.fromJson(carJson);
+  //         if (car.availability) {
+  //           CarRentalOptions? rentalOptions; // Still null unless fetched explicitly
+  //           CarUsagePolicy? usagePolicy;   // Still null unless fetched explicitly
+  //           result.add({
+  //             'car': car,
+  //             'carJson': carJson,
+  //             'rentalOptions': rentalOptions,
+  //             'usagePolicy': usagePolicy,
+  //           });
+  //         }
+  //       }
+  //       print('✅ CarService: Successfully fetched ${result.length} available cars');
+  //     } else {
+  //       print('❌ CarService: Failed to fetch available cars, status: ${response.statusCode}');
+  //     }
+  //     return result;
+  //   } catch (e) {
+  //     print('❌ CarService: Error in fetchAllCars: $e');
+  //     return [];
+  //   }
+  // }
+  // Modified fetchAllCars to use POST with FormData
+  Future<List<Map<String, dynamic>>> fetchAllCars({
+    DateTime? availableFrom,
+    DateTime? availableTo,
+    String rentalType = 'both', // Default to 'both'
+    String? carBrand, // Optional car brand
+    // NOTE: If you decide to send an image directly with this request for filtering,
+    // you'd add File? imageFile here. For now, it's separate as per your initial plan (classify-car/ then filter).
+  }) async {
     final List<Map<String, dynamic>> result = [];
     try {
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('admin_access_token');
+      final token = prefs.getString('admin_access_token') ?? prefs.getString('access_token'); // Use admin or user token
       if (token == null) {
         throw Exception('User access token not found');
       }
-      print('Fetching all available cars from /cars/ using user token...');
-      final response = await ApiService().getWithToken('cars/', token);
+
+      String endpoint = 'available-cars/'; // Your endpoint
+
+      final Map<String, dynamic> formDataMap = {
+        'available_from': DateFormat('yyyy-MM-dd').format(availableFrom ?? DateTime.now()),
+        'available_to': DateFormat('yyyy-MM-dd').format(availableTo ?? DateTime.now().add(const Duration(days: 7))),
+        'rental_type': rentalType,
+      };
+
+      if (carBrand != null && carBrand.isNotEmpty) {
+        formDataMap['car_brand'] = carBrand;
+      }
+
+      // If you were to send an image here as part of this form-data request for filtering:
+      // if (imageFile != null) {
+      //   formDataMap['image'] = await MultipartFile.fromFile(imageFile.path, filename: imageFile.path.split('/').last);
+      // }
+
+      final formData = FormData.fromMap(formDataMap);
+
+      print("""""""""""""""""""""""""""""""""""""seiffffffffff""""""""""""""""""""""""""""""""""""");
+      print("FormData fields: ${formData.fields}");
+      print("FormData files: ${formData.files}"); // Check if files are added if applicable
+      print("""""""""""""""""""""""""""""""""""""seiffffffffff""""""""""""""""""""""""""""""""""""");
+
+      print('CarService: Fetching available cars from $endpoint with POST and FormData using token...');
+      // Use the new postWithTokenAndFormData method
+      final response = await ApiService().postWithTokenAndFormData(endpoint, formData);
+
       if (response.statusCode == 200) {
-        print("🔍 Cars response data type: ${response.data.runtimeType}");
-        print("🔍 Cars response data: ${response.data}");
-        
-        // Debug: Check user roles to understand the difference
-        await debugUserRoles();
-        
         List carsData;
         if (response.data is Map) {
-          // If response is a Map, try to extract the list from it
           final data = response.data as Map;
           if (data.containsKey('results')) {
             carsData = List.from(data['results']);
           } else if (data.containsKey('data')) {
             carsData = List.from(data['data']);
           } else {
-            print("❌ Unexpected cars response format");
+            print("❌ CarService: Unexpected cars response format");
             return [];
           }
         } else if (response.data is List) {
           carsData = List.from(response.data);
         } else {
-          print("❌ Unexpected cars response format");
+          print("❌ CarService: Unexpected cars response format");
           return [];
         }
-        
-        print("🔍 Total cars fetched from API: ${carsData.length}");
-        
+
         for (final carJson in carsData) {
           final car = CarModel.fromJson(carJson);
-          print("🔍 Car owner ID: ${car.ownerId} (this is the user ID who owns the car)");
-          print("🔍 Car availability: ${car.availability}, approval status: ${car.approvalStatus}");
-          print("🔍 Car model: ${car.model}, brand: ${car.brand}");
-          print("🔍 Full carJson: " + carJson.toString());
-          // Include cars that are available (approval status can be false for now)
           if (car.availability) {
-            print("✅ Car is available, adding to result list");
             CarRentalOptions? rentalOptions;
             CarUsagePolicy? usagePolicy;
-            // يمكن لاحقاً جلب rentalOptions و usagePolicy إذا احتجت
             result.add({
               'car': car,
               'carJson': carJson,
               'rentalOptions': rentalOptions,
               'usagePolicy': usagePolicy,
             });
-          } else {
-            print("❌ Car is not available, skipping");
           }
         }
-        print('✅ Successfully fetched ${result.length} available cars');
+        print('✅ CarService: Successfully fetched ${result.length} available cars');
       } else {
-        print('❌ Failed to fetch available cars, status: ${response.statusCode}');
+        print('❌ CarService: Failed to fetch available cars, status: ${response.statusCode}');
+        // Optionally print error body if available
+        // print('Error body: ${response.data}');
       }
       return result;
     } catch (e) {
-      print('❌ Error in fetchAllCars: $e');
+      print('❌ CarService: Error in fetchAllCars (POST): $e');
       return [];
     }
   }
-
   // Add car separately
   Future<Response?> postCar(Map<String, dynamic> carData, {bool useAdminToken = false}) async {
     try {
       if (useAdminToken) {
         print('Posting car using admin token...');
-        return await ApiService().postWithToken('cars/', carData);
+        return await ApiService().postWithAdminToken('cars/', carData);
       } else {
         print('Posting car using user token...');
         return await ApiService().postWithToken('cars/', carData);
       }
     } catch (e) {
       print('Error posting car: $e');
-      return null;
+      rethrow; // Re-throw to propagate error to cubit
     }
   }
 

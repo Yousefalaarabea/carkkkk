@@ -1,56 +1,75 @@
-import 'package:flutter/cupertino.dart';
+// add_car_cubit.dart
+import 'package:flutter/material.dart'; // Import for GlobalKey, if still needed
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test_cark/features/home/presentation/model/car_model.dart';
-import 'package:test_cark/features/home/presentation/cubit/car_cubit.dart';
+import 'package:test_cark/features/home/presentation/cubit/car_cubit.dart'; // Ensure this cubit is for other home screen filters
+import 'package:intl/intl.dart'; // Added for date formatting
+
 import '../../../../core/api_service.dart';
-import '../../../../core/car_service.dart';
+import '../../../../core/car_service.dart'; // Ensure this is the correct path for CarService
 import '../../../auth/presentation/cubits/auth_cubit.dart';
 import 'add_car_state.dart';
 import 'package:test_cark/features/cars/presentation/models/car_rental_options.dart';
 import 'package:test_cark/features/cars/presentation/models/car_usage_policy.dart';
 
+// Assuming this GlobalKey is used for context outside a widget build method,
+// otherwise, consider using BlocProvider.of(context) directly.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class AddCarCubit extends Cubit<AddCarState> {
   final CarService _carService = CarService();
-  List<CarBundle> _cars = [];
+  List<CarBundle> _cars = []; // This list holds the currently loaded cars
 
   AddCarCubit() : super(AddCarInitial());
 
   List<CarBundle> getCars() => _cars;
 
-  // Fetch all available cars for home screen
-  Future<List<CarBundle>> fetchAllAvailableCars() async {
+  /// Fetch all available cars for home screen with optional filters.
+  /// This method now directly interacts with CarService which constructs the URL.
+  Future<void> fetchAllCars({
+    DateTime? availableFrom,
+    DateTime? availableTo,
+    String rentalType = 'both', // Default to 'both'
+    String? carBrand, // Optional car brand
+  }) async {
+    emit(AddCarLoading()); // Indicate loading state
     try {
-      print('🔄 AddCarCubit: Fetching all available cars...');
-      final carBundlesRaw = await _carService.fetchAllCars();
+      print('🔄 AddCarCubit: Fetching all available cars with filters...');
+
+      // Call the CarService with the new parameters
+      final carBundlesRaw = await _carService.fetchAllCars(
+        availableFrom: availableFrom,
+        availableTo: availableTo,
+        rentalType: rentalType,
+        carBrand: carBrand,
+      );
+
       print('✅ AddCarCubit: Raw data received: ${carBundlesRaw.length} cars');
-      
+
       final carBundles = carBundlesRaw.map((e) {
         final car = e['car'] as CarModel;
         final rentalOptions = e['rentalOptions'] as CarRentalOptions?;
         final usagePolicy = e['usagePolicy'] as CarUsagePolicy?;
-        
-        print('   📦 Creating CarBundle for: ${car.brand} ${car.model}');
-        print('      - RentalOptions: ${rentalOptions != null ? "Available" : "Null"}');
-        print('      - UsagePolicy: ${usagePolicy != null ? "Available" : "Null"}');
-        
+
         return CarBundle(
           car: car,
           rentalOptions: rentalOptions,
           usagePolicy: usagePolicy,
         );
       }).toList();
-      
-      print('✅ AddCarCubit: Created ${carBundles.length} CarBundles');
-      return carBundles;
+
+      _cars = carBundles; // Update the internal list
+      print('✅ AddCarCubit: Created ${carBundles.length} CarBundles and emitting AddCarFetchedSuccessfully');
+      emit(AddCarFetchedSuccessfully(cars: carBundles)); // Emit success state with fetched cars
     } catch (e) {
-      print('❌ AddCarCubit: Error fetching all available cars: $e');
-      return [];
+      print('❌ AddCarCubit: Error fetching all available cars with filters: $e');
+      emit(AddCarError(message: 'Error loading cars: $e')); // Emit error state
     }
   }
 
+  // Existing fetchCarsFromServer - this is likely for "my-cars" (owner's cars)
+  // It should also emit a state like AddCarFetchedSuccessfully
   Future<void> fetchCarsFromServer() async {
     emit(AddCarLoading());
     try {
@@ -74,15 +93,19 @@ class AddCarCubit extends Cubit<AddCarState> {
   }) async {
     emit(AddCarLoading());
     try {
+      // Correctly pass Map<String, dynamic> from models
       final success = await _carService.addCar(
         carData: car.toJson(),
         rentalOptionsData: rentalOptions.toJson(),
         usagePolicyData: usagePolicy.toJson(),
       );
       if (success) {
-        await fetchCarsFromServer();
+        await fetchCarsFromServer(); // Refresh the list of user's cars
         if (_cars.isNotEmpty) {
           emit(AddCarSuccess(carBundle: _cars.last));
+        } else {
+          // If no cars after fetch (e.g., this was the first car), emit a general success
+          emit(const AddCarSuccess(carBundle: null)); // Consider adjusting AddCarSuccess to allow null
         }
       } else {
         emit(const AddCarError(message: 'Failed to add car'));

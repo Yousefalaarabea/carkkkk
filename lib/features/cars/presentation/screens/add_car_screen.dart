@@ -158,7 +158,7 @@ class _AddCarScreenState extends State<AddCarScreen> with SingleTickerProviderSt
           await context.read<AuthCubit>().loadUserData();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Car "${state.carBundle.car.brand} ${state.carBundle.car.model}" ${widget.carToEdit != null ? 'updated' : 'added'} successfully!'),
+              content: Text('Car "${state.carBundle?.car.brand} ${state.carBundle?.car.model}" ${widget.carToEdit != null ? 'updated' : 'added'} successfully!'),
               backgroundColor: Colors.green,
               duration: const Duration(seconds: 3),
             ),

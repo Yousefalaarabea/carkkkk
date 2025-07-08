@@ -52,7 +52,7 @@ class _CarCardWidgetState extends State<CarCardWidget> {
         if (response.statusCode == 200) {
           setState(() {
             carImageUrl = response.data['image_url'];
-            carPrice = response.data['daily_price_with_driver']?.toDouble();
+            carPrice = response.data['daily_price_without_driver']?.toDouble();
             isLoading = false;
           });
         }
