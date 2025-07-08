@@ -20,6 +20,9 @@ import 'feedback_screen.dart';
 import 'notification_test_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../auth/presentation/cubits/auth_cubit.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'dart:io';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,6 +32,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  File? _selectedImage;
+  bool _isUploading = false;
+  String? _brandResult;
+
   void _navigateAndCloseDrawer(BuildContext context, Widget screen) {
     Navigator.pop(context); // Close the drawer
     Navigator.push(
@@ -45,6 +52,88 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushReplacementNamed(context, ScreensName.login);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Logged out successfully')),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: source);
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = File(pickedFile.path);
+      });
+      await _uploadImage(_selectedImage!);
+    }
+  }
+
+  Future<void> _uploadImage(File imageFile) async {
+    setState(() {
+      _isUploading = true;
+      _brandResult = null;
+    });
+    try {
+      var request = http.MultipartRequest('POST', Uri.parse('http://10.0.2.2:8000/classify-car/'));
+      request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
+      var response = await request.send();
+      if (response.statusCode == 200) {
+        final respStr = await response.stream.bytesToString();
+        setState(() {
+          _brandResult = respStr;
+        });
+        _showBrandDialog(respStr);
+      } else {
+        _showBrandDialog('Error uploading');
+      }
+    } catch (e) {
+      _showBrandDialog('Server Problem');
+    } finally {
+      setState(() {
+        _isUploading = false;
+      });
+    }
+  }
+
+  void _showBrandDialog(String brand) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Result'),
+        content: Text(brand),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Ok'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Open Camera?'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Choose from gallery'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -68,19 +157,17 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
           ),
           actions: [
+            // Camera icon
+            IconButton(
+              icon: const Icon(Icons.camera_alt),
+              onPressed: _isUploading ? null : _showImageSourceSheet,
+              tooltip: 'التقاط أو رفع صورة',
+            ),
             // Notification icon with badge
             NotificationBadgeWidget(
               onTap: () {
-                // Navigate to appropriate notification screen based on user role
                 final authCubit = context.read<AuthCubit>();
                 final user = authCubit.userModel;
-                // if (user?.role == 'owner') {
-                //   Navigator.pushNamed(
-                //       context, ScreensName.newnotifytest);
-                // } else {
-                //   Navigator.pushNamed(
-                //       context, ScreensName.newnotifytest);
-                // }
                 Navigator.pushNamed(
                     context, ScreensName.newnotifytest);
               },

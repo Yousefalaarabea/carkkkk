@@ -8,6 +8,7 @@ import 'package:test_cark/config/themes/light_theme.dart';
 import 'package:test_cark/features/auth/presentation/cubits/auth_cubit.dart';
 import 'package:test_cark/features/auth/presentation/cubits/document_cubit.dart';
 import 'package:test_cark/features/shared/cubit/navigation_cubit.dart';
+import 'features/auth/presentation/cubits/ml_validation_cubit.dart';
 import 'features/cars/presentation/cubits/add_car_cubit.dart';
 import 'features/cars/presentation/cubits/smart_car_matching_cubit.dart';
 import 'features/handover/handover/presentation/cubits/contract_upload_cubit.dart';
@@ -78,6 +79,9 @@ class Cark extends StatelessWidget {
               ),
               BlocProvider(
                 create: (context) => TripCubit(),
+              ),
+              BlocProvider(
+                create: (context) => MLValidationCubit(),
               ),
               BlocProvider(
                 create: (context) => SmartCarMatchingCubit(),

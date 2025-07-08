@@ -95,7 +95,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   const AuthOptionsText(
                     text1: TextManager.alreadyHaveAccount,
                     text2: TextManager.loginText,
-                    screenName: ScreensName.login,
+                    screenName: ScreensName.documentUploadScreen,
                   )
                 ],
               ),
